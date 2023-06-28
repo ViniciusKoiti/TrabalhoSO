@@ -111,11 +111,16 @@ class os_t:
 		if task.state != PYOS_TASK_STATE_READY:
 			self.panic("task "+task.bin_name+" must be in READY state for being scheduled (state = "+str(task.state)+")")
 
-		# TODO
 		# Escrever no processador os registradores de proposito geral salvos na task struct
+		for i in range(len(task.regs)):
+			self.cpu.set_reg(i, task.regs[i])
 		# Escrever no processador o PC salvo na task struct
+		self.cpu.set_pc(task.reg_pc)
 		# Atualizar estado do processo
+		task.state = PYOS_TASK_STATE_EXECUTING
 		# Escrever no processador os registradores que configuram a memoria virtual, salvos na task struct
+		self.cpu.set_paddr_offset(task.paddr_offset)
+		self.cpu.set_paddr_max(task.paddr_max)
 
 		self.current_task = task
 		self.printk("scheduling task "+task.bin_name)
@@ -129,17 +134,15 @@ class os_t:
 
 	def allocate_contiguos_physical_memory_to_task(self, words, task):
     # TODO
-    # Localizar um bloco de memoria livre para armazenar o processo
-    # Retornar tupla <primeiro endereco livre>, <ultimo endereco livre>
-
 		potential_max_address = self.memory_offset + words
 		if potential_max_address < (self.memory.get_size() - 1):
+			# Localizar um bloco de memoria livre para armazenar o processo
 			allocated_min_address = self.memory_offset
 
 			allocated_max_address = potential_max_address
 
 			self.memory_offset = potential_max_address + 1
-
+			# Retornar tupla <primeiro endereco livre>, <ultimo endereco livre>
 			return allocated_min_address, allocated_max_address
 
 		self.printk("could not allocate memory to task "+task.bin_name)
@@ -205,10 +208,13 @@ class os_t:
 		if task is not self.current_task:
 			self.panic("task "+task.bin_name+" must be the current_task for being scheduled (current_task = "+self.current_task.bin_name+")")
 
-		# TODO
 		# Salvar na task struct
+		for i in range(len(task.regs)):
+			self.cpu.set_reg(i, task.regs[i])
 		# - registradores de proposito geral
+		self.cpu.set_pc(task.reg_pc)
 		# - PC
+		task.state = PYOS_TASK_STATE_READY
 		# Atualizar o estado do processo
 
 		self.current_task = None
@@ -243,17 +249,17 @@ class os_t:
 			self.interrupt_timer()
 		else:
 			self.panic("invalid interrupt "+str(interrupt))
-
-	def syscall (self):
+	
+	def syscall(self):
 		service = self.cpu.get_reg(0)
 		task = self.current_task
 
 		if service == 0:
-			self.printk("app "+self.current_task.bin_name+" request finish")
+			self.printk("app " + self.current_task.bin_name + " solicita finalizacao")
 			self.un_sched(task)
 			self.terminate_unsched_task(task)
 			self.sched(self.idle_task)
-
+			
 		# TODO
 		# Implementar aqui as outras chamadas de sistema
 		
