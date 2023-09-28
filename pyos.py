@@ -29,7 +29,7 @@ class os_t:
 
 		self.console_str = ""
 
-		self.the_task = None
+		self.tasks = []
 		self.next_task_id = 0
 
 		self.memory_offset = 0
@@ -105,24 +105,25 @@ class os_t:
 		if i != bin_size:
 			self.panic("something really bad happenned when loading "+bin_name+" (i != task.bin_size)")
 
-	def sched (self, task):
+	def sched (self, tasks):
 		if self.current_task is not None:
 			self.panic("current_task must be None when scheduling a new one (current_task="+self.current_task.bin_name+")")
-		if task.state != PYOS_TASK_STATE_READY:
-			self.panic("task "+task.bin_name+" must be in READY state for being scheduled (state = "+str(task.state)+")")
+		
 
 		# Escrever no processador os registradores de proposito geral salvos na task struct
-		for i in range(len(task.regs)):
-			self.cpu.set_reg(i, task.regs[i])
+		for task in range(tasks):
+			for i in range(len(task.regs)):
+				self.cpu.set_reg(i, task.regs[i])
 		# Escrever no processador o PC salvo na task struct
-		self.cpu.set_pc(task.reg_pc)
+				self.cpu.set_pc(task.reg_pc)
 		# Atualizar estado do processo
-		task.state = PYOS_TASK_STATE_EXECUTING
+				task.state = PYOS_TASK_STATE_EXECUTING
 		# Escrever no processador os registradores que configuram a memoria virtual, salvos na task struct
-		self.cpu.set_paddr_offset(task.paddr_offset)
-		self.cpu.set_paddr_max(task.paddr_max)
+			self.cpu.set_paddr_offset(task.paddr_offset)
+			self.cpu.set_paddr_max(task.paddr_max)
+			self.tasks.append(task)
 
-		self.current_task = task
+		
 		self.printk("scheduling task "+task.bin_name)
 
 	def get_task_amount_of_memory (self, task):
@@ -136,13 +137,13 @@ class os_t:
     # TODO
 		potential_max_address = self.memory_offset + words
 		if potential_max_address < (self.memory.get_size() - 1):
-			# Localizar um bloco de memoria livre para armazenar o processo
+
 			allocated_min_address = self.memory_offset
 
 			allocated_max_address = potential_max_address
 
 			self.memory_offset = potential_max_address + 1
-			# Retornar tupla <primeiro endereco livre>, <ultimo endereco livre>
+			
 			return allocated_min_address, allocated_max_address
 
 		self.printk("could not allocate memory to task "+task.bin_name)
@@ -176,18 +177,15 @@ class os_t:
 		elif cmd == "tasks":
 			self.task_table_print()
 		elif cmd[:3] == "run":
-			if (self.the_task is not None):
-				self.terminal.console_print("error: binary " + self.the_task.bin_name + " is already running\n")
+			bin_name = cmd[4:]
+			self.terminal.console_print("\rrun binary " + bin_name + "\n")
+			task = self.load_task(bin_name)
+			if task is not None:
+				self.tasks.append(task)
+				self.un_sched(self.idle_task)
+				self.sched(task)
 			else:
-				bin_name = cmd[4:]
-				self.terminal.console_print("\rrun binary " + bin_name + "\n")
-				task = self.load_task(bin_name)
-				if task is not None:
-					self.the_task = task;
-					self.un_sched(self.idle_task)
-					self.sched(self.the_task)
-				else:
-					self.terminal.console_print("error: binary " + bin_name + " not found\n")
+				self.terminal.console_print("error: binary " + bin_name + " not found\n")
 		else:
 			self.terminal.console_print("\rinvalid cmd " + cmd + "\n")
 
@@ -199,26 +197,27 @@ class os_t:
 		if task is not self.the_task:
 			self.panic("task being terminated should be the_task")
 		
-		self.the_task = None
+		self.tasks = []
 		self.printk("task "+task.bin_name+" terminated")
 
-	def un_sched (self, task):
+	def un_sched (self, tasks):
 		if task.state != PYOS_TASK_STATE_EXECUTING:
 			self.panic("task "+task.bin_name+" must be in EXECUTING state for being scheduled (state = "+str(task.state)+")")
 		if task is not self.current_task:
 			self.panic("task "+task.bin_name+" must be the current_task for being scheduled (current_task = "+self.current_task.bin_name+")")
 
 		# Salvar na task struct
-		for i in range(len(task.regs)):
-			self.cpu.set_reg(i, task.regs[i])
-		# - registradores de proposito geral
-		self.cpu.set_pc(task.reg_pc)
-		# - PC
-		task.state = PYOS_TASK_STATE_READY
-		# Atualizar o estado do processo
+		for task in range(len(tasks)):
+			for i in range(len(task.regs)):
+				self.cpu.set_reg(i, task.regs[i])
+			# - registradores de proposito geral
+			self.cpu.set_pc(task.reg_pc)
+			# - PC
+			task.state = PYOS_TASK_STATE_READY
+			# Atualizar o estado do processo
 
-		self.current_task = None
-		self.printk("unscheduling task "+task.bin_name)
+		self.tasks = []
+		self.printk("unscheduling task "+ task.bin_name)
 
 	def virtual_to_physical_addr (self, task, vaddr):
 		return task.paddr_offset + vaddr
@@ -256,7 +255,7 @@ class os_t:
 
 		if service == 0:
 			self.printk("app " + self.current_task.bin_name + " solicita finalizacao")
-			self.un_sched(task)
+			self.un_sched(self.tasks)
 			self.terminate_unsched_task(task)
 			self.sched(self.idle_task)
 			
