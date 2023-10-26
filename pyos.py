@@ -30,6 +30,8 @@ class os_t:
 		self.console_str = ""
 
 		self.tasks = []
+		self.memory_page_size = 4096
+		self.page = 0
 		self.next_task_id = 0
 
 		self.memory_offset = 0
@@ -105,24 +107,19 @@ class os_t:
 		if i != bin_size:
 			self.panic("something really bad happenned when loading "+bin_name+" (i != task.bin_size)")
 
-	def sched (self, tasks):
+	def sched (self, task):
 		if self.current_task is not None:
 			self.panic("current_task must be None when scheduling a new one (current_task="+self.current_task.bin_name+")")
 		
-
-		# Escrever no processador os registradores de proposito geral salvos na task struct
-		for task in range(tasks):
+		for task in range(this.tasks):
 			for i in range(len(task.regs)):
 				self.cpu.set_reg(i, task.regs[i])
-		# Escrever no processador o PC salvo na task struct
 				self.cpu.set_pc(task.reg_pc)
-		# Atualizar estado do processo
 				task.state = PYOS_TASK_STATE_EXECUTING
-		# Escrever no processador os registradores que configuram a memoria virtual, salvos na task struct
 			self.cpu.set_paddr_offset(task.paddr_offset)
 			self.cpu.set_paddr_max(task.paddr_max)
 			self.tasks.append(task)
-
+		
 		
 		self.printk("scheduling task "+task.bin_name)
 
@@ -200,14 +197,14 @@ class os_t:
 		self.tasks = []
 		self.printk("task "+task.bin_name+" terminated")
 
-	def un_sched (self, tasks):
+	def un_sched (self, task):
 		if task.state != PYOS_TASK_STATE_EXECUTING:
 			self.panic("task "+task.bin_name+" must be in EXECUTING state for being scheduled (state = "+str(task.state)+")")
 		if task is not self.current_task:
 			self.panic("task "+task.bin_name+" must be the current_task for being scheduled (current_task = "+self.current_task.bin_name+")")
 
 		# Salvar na task struct
-		for task in range(len(tasks)):
+		for task in range(len(self.tasks)):
 			for i in range(len(task.regs)):
 				self.cpu.set_reg(i, task.regs[i])
 			# - registradores de proposito geral
