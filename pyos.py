@@ -110,17 +110,16 @@ class os_t:
 	def sched (self, task):
 		if self.current_task is not None:
 			self.panic("current_task must be None when scheduling a new one (current_task="+self.current_task.bin_name+")")
-		
-		for task in range(this.tasks):
-			for i in range(len(task.regs)):
-				self.cpu.set_reg(i, task.regs[i])
-				self.cpu.set_pc(task.reg_pc)
-				task.state = PYOS_TASK_STATE_EXECUTING
-			self.cpu.set_paddr_offset(task.paddr_offset)
-			self.cpu.set_paddr_max(task.paddr_max)
-			self.tasks.append(task)
-		
-		
+
+		for i in range(1, 8):
+			self.cpu.set_reg(i, task.regs[i])
+
+		self.cpu.set_pc(task.reg_pc)
+		task.state = PYOS_TASK_STATE_EXECUTING
+		self.cpu.set_paddr_offset(task.paddr_offset)
+		self.cpu.set_paddr_max(task.paddr_max)
+  
+		self.tasks.append(task)
 		self.printk("scheduling task "+task.bin_name)
 
 	def get_task_amount_of_memory (self, task):
