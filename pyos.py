@@ -121,7 +121,6 @@ class os_t:
 		self.cpu.set_paddr_offset(task.paddr_offset)
 		self.cpu.set_paddr_max(task.paddr_max)
   
-		self.tasks.append(task)
 		self.current_task = task
 		self.printk("scheduling task "+task.bin_name)
 
@@ -133,7 +132,7 @@ class os_t:
 	# -1, -1 if cannot find
 
 	def allocate_contiguos_physical_memory_to_task(self, words, task):
-    # TODO
+    # TODO Arrumar vazamento de memória
 		potential_max_address = self.memory_offset + words
 		if potential_max_address < (self.memory.get_size() - 1):
 
@@ -196,6 +195,7 @@ class os_t:
 		if task is not self.the_task:
 			self.panic("task being terminated should be the_task")
 		
+		#TODO limpar memória
 		self.tasks.remove(task)
 		self.printk("task "+task.bin_name+" terminated")
 
@@ -275,10 +275,10 @@ class os_t:
 				self.sched(self.tasks[0])
 			return
 		if(len(self.tasks) > 1):
-			task_to_allocate = 0
+			task_to_sched = 0
 			if(len(self.tasks) - 1 < self.next_sched_task):
-				task_to_allocate = 0
+				task_to_sched = 0
 			else:
-				task_to_allocate = self.next_sched_task
-			self.sched(self.tasks[task_to_allocate])
-			self.next_sched_task = task_to_allocate
+				task_to_sched = self.next_sched_task
+			self.sched(self.tasks[task_to_sched])
+			self.next_sched_task = task_to_sched
