@@ -110,8 +110,10 @@ class os_t:
 	def sched (self, task):
 		if self.current_task is not None:
 			self.panic("current_task must be None when scheduling a new one (current_task="+self.current_task.bin_name+")")
+		if task.state != PYOS_TASK_STATE_READY:
+			self.panic("task "+task.bin_name+" must be in READY state for being scheduled (state = "+str(task.state)+")")
 
-		for i in range(1, 8):
+		for i in range(0, 7):
 			self.cpu.set_reg(i, task.regs[i])
 
 		self.cpu.set_pc(task.reg_pc)
@@ -120,6 +122,7 @@ class os_t:
 		self.cpu.set_paddr_max(task.paddr_max)
   
 		self.tasks.append(task)
+		self.current_task = task
 		self.printk("scheduling task "+task.bin_name)
 
 	def get_task_amount_of_memory (self, task):
@@ -178,7 +181,7 @@ class os_t:
 			task = self.load_task(bin_name)
 			if task is not None:
 				self.tasks.append(task)
-				self.un_sched(self.idle_task)
+				self.un_sched(self.current_task)
 				self.sched(task)
 			else:
 				self.terminal.console_print("error: binary " + bin_name + " not found\n")
@@ -198,21 +201,21 @@ class os_t:
 
 	def un_sched (self, task):
 		if task.state != PYOS_TASK_STATE_EXECUTING:
-			self.panic("task "+task.bin_name+" must be in EXECUTING state for being scheduled (state = "+str(task.state)+")")
+			self.panic("task "+task.bin_name+" must be in EXECUTING state for being unscheduled (state = "+str(task.state)+")")
 		if task is not self.current_task:
-			self.panic("task "+task.bin_name+" must be the current_task for being scheduled (current_task = "+self.current_task.bin_name+")")
+			self.panic("task "+task.bin_name+" must be the current_task for being unscheduled (current_task = "+self.current_task.bin_name+")")
 
 		# Salvar na task struct
-		for task in range(len(self.tasks)):
-			for i in range(len(task.regs)):
-				self.cpu.set_reg(i, task.regs[i])
-			# - registradores de proposito geral
-			self.cpu.set_pc(task.reg_pc)
-			# - PC
-			task.state = PYOS_TASK_STATE_READY
-			# Atualizar o estado do processo
+		for i in range(0, 7):
+			task.regs[i] = self.cpu.get_reg(i)
+		# - registradores de proposito geral
+		# - PC
+		task.reg_pc = self.cpu.reg_pc
+		# Atualizar o estado do processo
+		task.state = PYOS_TASK_STATE_READY
 
-		self.tasks = []
+		self.current_task = None
+  
 		self.printk("unscheduling task "+ task.bin_name)
 
 	def virtual_to_physical_addr (self, task, vaddr):
@@ -233,7 +236,8 @@ class os_t:
 		self.sched(self.idle_task)
 
 	def interrupt_timer (self):
-		self.printk("timer interrupt NOT IMPLEMENTED")
+		# Chamar escalonador
+		self.escalonador()
 
 	def handle_interrupt (self, interrupt):
 		if interrupt == pycfg.INTERRUPT_MEMORY_PROTECTION_FAULT:
@@ -260,3 +264,19 @@ class os_t:
 		
 		else:
 			self.handle_gpf("invalid syscall "+str(service))
+   
+	def escalonador(self):    
+		if (len(self.tasks) == 0):
+			if(self.current_task != self.idle_task):
+				self.un_sched(self.current_task)
+				self.sched(self.idle_task)
+		if(len(self.tasks) == 1):
+			return
+		if(len(self.tasks) > 1):
+			task_to_allocate = 0
+			if(len(self.tasks) - 1 < self.next_sched_task):
+				task_to_allocate = 0
+			else:
+				task_to_allocate = self.next_sched_task
+			self.sched(self.tasks[task_to_allocate])
+			self.next_sched_task = task_to_allocate
