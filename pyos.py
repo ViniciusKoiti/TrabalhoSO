@@ -196,7 +196,7 @@ class os_t:
 		if task is not self.the_task:
 			self.panic("task being terminated should be the_task")
 		
-		self.tasks = []
+		self.tasks.remove(task)
 		self.printk("task "+task.bin_name+" terminated")
 
 	def un_sched (self, task):
@@ -257,7 +257,7 @@ class os_t:
 			self.printk("app " + self.current_task.bin_name + " solicita finalizacao")
 			self.un_sched(self.tasks)
 			self.terminate_unsched_task(task)
-			self.sched(self.idle_task)
+			self.escalonador()
 			
 		# TODO
 		# Implementar aqui as outras chamadas de sistema
