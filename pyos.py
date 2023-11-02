@@ -132,7 +132,7 @@ class os_t:
 	# -1, -1 if cannot find
 
 	def allocate_contiguos_physical_memory_to_task(self, words, task):
-    # TODO Arrumar vazamento de memória
+    # TODO Arrumar vazamento de memoria
 		potential_max_address = self.memory_offset + words
 		if potential_max_address < (self.memory.get_size() - 1):
 
@@ -195,7 +195,7 @@ class os_t:
 		if task is not self.the_task:
 			self.panic("task being terminated should be the_task")
 		
-		#TODO limpar memória
+		#TODO limpar memoria
 		self.tasks.remove(task)
 		self.printk("task "+task.bin_name+" terminated")
 
