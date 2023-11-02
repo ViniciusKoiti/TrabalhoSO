@@ -233,7 +233,7 @@ class os_t:
 		self.printk("gpf task "+task.bin_name+": "+error)
 		self.un_sched(task)
 		self.terminate_unsched_task(task)
-		self.sched(self.idle_task)
+		self.escalonador()
 
 	def interrupt_timer (self):
 		# Chamar escalonador
