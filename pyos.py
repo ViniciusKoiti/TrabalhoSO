@@ -265,12 +265,14 @@ class os_t:
 		else:
 			self.handle_gpf("invalid syscall "+str(service))
    
-	def escalonador(self):    
+	def escalonador(self):
 		if (len(self.tasks) == 0):
-			if(self.current_task != self.idle_task):
-				self.un_sched(self.current_task)
+			if(self.current_task is None):
 				self.sched(self.idle_task)
 		if(len(self.tasks) == 1):
+			if(self.current_task != self.tasks[0]):
+				self.un_sched(self.current_task)
+				self.sched(self.tasks[0])
 			return
 		if(len(self.tasks) > 1):
 			task_to_allocate = 0
