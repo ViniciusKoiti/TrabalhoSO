@@ -30,19 +30,19 @@ class os_t:
 		self.console_str = ""
 
 		self.tasks = []
-		self.memory_page_size = 4096
+		
 		self.page = 0
 		self.next_task_id = 0
-
 		self.memory_offset = 0
-
 		self.current_task = None
 		self.next_sched_task = 0
 		self.idle_task = None
 		self.idle_task = self.load_task("idle.bin")
-
-		self.blocksize = 256
 		
+		self.memory_page_size = 4096
+		self.blocksize = 256
+		self.number_blocks = self.memory.get_size() / self.memory_page_size
+		self.memory_blocks = [0] * self.number_blocks
 
 		if self.idle_task is None:
 			self.panic("could not load idle.bin task")
@@ -136,19 +136,22 @@ class os_t:
 
 	def allocate_contiguos_physical_memory_to_task(self, words, task):
     # TODO Arrumar vazamento de memoria
+		if words > self.blocksize:
+			return -1,-1
+		
+		free_block_index = self.memory_blocks.index[0]
+
+		if free_block == -1:
+			return -1, -1
+
+		paddr_max = free_block_index * self.blocksize - 1
 		potential_max_address = self.memory_offset + words
-		if potential_max_address < (self.memory.get_size() - 1):
-
-			allocated_min_address = self.memory_offset
-
-			allocated_max_address = potential_max_address
-
-			self.memory_offset = potential_max_address + 1
-			
-			return allocated_min_address, allocated_max_address
-
-		self.printk("could not allocate memory to task "+task.bin_name)
-		return -1, -1
+		if paddr_max < (self.memory.get_size() - 1):
+			return -1, -1
+		
+		self.memory_blocks[free_block_index] = 1
+		return paddr_offset, paddr_max
+		
 
 	def printk(self, msg):
 		self.terminal.kernel_print("kernel: " + msg + "\n")
