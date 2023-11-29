@@ -41,6 +41,9 @@ class os_t:
 		self.idle_task = None
 		self.idle_task = self.load_task("idle.bin")
 
+		self.blocksize = 256
+		
+
 		if self.idle_task is None:
 			self.panic("could not load idle.bin task")
 		
@@ -259,8 +262,14 @@ class os_t:
 			self.terminate_unsched_task(task)
 			self.escalonador()
 			
-		# TODO
-		# Implementar aqui as outras chamadas de sistema
+		elif service == 1:
+			self.print_string_service(task, self.cpu.get_reg(1))
+
+		elif service == 2:
+			self.terminal.app_print("\n")
+
+		elif service == 3:
+			self.terminal.app_print(str(self.cpu.get_reg(1)))
 		
 		else:
 			self.handle_gpf("invalid syscall "+str(service))
