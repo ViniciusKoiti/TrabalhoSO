@@ -33,7 +33,6 @@ class os_t:
 		
 		self.page = 0
 		self.next_task_id = 0
-		self.memory_offset = 0
 		self.current_task = None
 		self.next_sched_task = 0
 		self.idle_task = None
@@ -144,10 +143,8 @@ class os_t:
 		if free_block == -1:
 			return -1, -1
 
+		paddr_offset = free_block_index * (self.blocksize - 1)
 		paddr_max = free_block_index * self.blocksize - 1
-		potential_max_address = self.memory_offset + words
-		if paddr_max < (self.memory.get_size() - 1):
-			return -1, -1
 		
 		self.memory_blocks[free_block_index] = 1
 		return paddr_offset, paddr_max
